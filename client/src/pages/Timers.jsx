@@ -449,7 +449,7 @@ export default function Timers() {
       <SectionTitle sub="Protect your focus. Every block of deep work is a brick in the ₹1Cr foundation." action={
         <button onClick={() => setModal(true)} className="btn-exec"><Plus size={15} /> Add Timer</button>
       }>Timer System</SectionTitle>
-      {timers.length === 0 && <EmptyState icon={Timer} message="No timers yet" sub="Add a Pomodoro to protect your focus." />}
+      {timers.length === 0 && pomodoros.length === 0 && <EmptyState icon={Timer} message="No timers yet" sub="Add a Pomodoro to protect your focus." />}
       {pomodoros.length > 0 && (
         <div>
           <div className="section-label mb-3">Pomodoro Timers</div>
@@ -466,11 +466,8 @@ export default function Timers() {
           </div>
         </div>
       )}
+      <TimelineTracker />
       <AddTimerModal open={modal} onClose={() => setModal(false)} onSaved={refetch} />
-      {/* <TimelineTracker />
-
-      <AddTimerModal open={modal} onClose={() => setModal(false)} onSaved={refetch} />
-    </div> */}
     </div>
   )
 }
