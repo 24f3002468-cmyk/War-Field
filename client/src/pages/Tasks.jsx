@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { Plus, Trash2, CheckCircle2, Circle, Calendar, Tag, AlertCircle, Clock } from 'lucide-react'
+import { Plus, Trash2, CheckCircle2, Circle, Calendar, Tag, AlertCircle, Clock, RepeatIcon } from 'lucide-react'
 import { format, isToday, isTomorrow, isPast, parseISO } from 'date-fns'
 import { SectionTitle, Field, Input, Select, Badge, EmptyState } from '../components/UI'
 import { TASK_CATEGORIES } from '../lib/utils'
@@ -10,6 +10,16 @@ const PRIORITY_COLORS = {
   'P1 — High': 'text-amber-400 border-amber-400/40 bg-amber-400/10',
   'P2 — Medium': 'text-signal border-signal/40 bg-signal/10',
   'P3 — Low': 'text-slate-400 border-slate-400/40 bg-slate-400/10',
+}
+
+const REPEAT_OPTIONS = ['None', 'Daily', 'Weekly', 'Monthly', 'Weekdays', 'Custom']
+const REPEAT_COLORS = {
+  'None': 'text-ghost',
+  'Daily': 'text-signal',
+  'Weekly': 'text-emerald-400',
+  'Monthly': 'text-purple-400',
+  'Weekdays': 'text-amber-400',
+  'Custom': 'text-accent',
 }
 
 const STORAGE_KEY = 'execos_tasks_v2'
@@ -34,10 +44,37 @@ function deadlineLabel(dl) {
 
 export default function Tasks() {
   const [tasks, setTasks] = useState(loadTasks)
-  const [form, setForm] = useState({ name: '', category: 'DSA', priority: 'P2 — Medium', deadline: '' })
+  const [form, setForm] = useState({ name: '', category: 'DSA', priority: 'P2 — Medium', deadline: '', repeat: 'None', customRepeat: '' })
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
   useEffect(() => { saveTasks(tasks) }, [tasks])
+  useEffect(() => {
+  const today = new Date().toISOString().split('T')[0]
+  const dayOfWeek = new Date().getDay() // 0=Sun, 1=Mon...
+  const dayOfMonth = new Date().getDate()
+
+  const reset = tasks.map(task => {
+    if (!task.done || task.repeat === 'None' || !task.lastCompleted) return task
+    if (task.lastCompleted === today) return task // already handled today
+
+    const shouldReset = (() => {
+      if (task.repeat === 'Daily') return true
+      if (task.repeat === 'Weekdays') return dayOfWeek >= 1 && dayOfWeek <= 5
+      if (task.repeat === 'Weekly') {
+        const last = new Date(task.lastCompleted)
+        return (new Date() - last) >= 7 * 86400000
+      }
+      if (task.repeat === 'Monthly') return new Date(task.lastCompleted).getDate() !== dayOfMonth
+      return false
+    })()
+
+    if (shouldReset) return { ...task, done: false }
+    return task
+  })
+
+  const hasChange = reset.some((t, i) => t.done !== tasks[i].done)
+  if (hasChange) setTasks(reset)
+}, []) // runs once on mount
 
   const add = () => {
     if (!form.name.trim()) return
@@ -47,14 +84,27 @@ export default function Tasks() {
       category: form.category,
       priority: form.priority,
       deadline: form.deadline || null,
+      repeat: form.repeat || 'None',
+      customRepeat: form.customRepeat || '',
       done: false,
       createdAt: new Date().toISOString(),
-    }
+      lastCompleted: null,
+}
     setTasks(t => [task, ...t])
     setForm(f => ({ ...f, name: '', deadline: '' }))
   }
 
-  const toggle = (id) => setTasks(t => t.map(x => x.id === id ? { ...x, done: !x.done } : x))
+  const toggle = (id) => {
+    const today = new Date().toISOString().split('T')[0]
+      setTasks(t => t.map(x => {
+        if (x.id !== id) return x
+        if (!x.done && x.repeat !== 'None') {
+          // Mark done but schedule next occurrence
+          return { ...x, done: true, lastCompleted: today }
+        }
+        return { ...x, done: !x.done }
+      }))
+}
   const del = (id) => setTasks(t => t.filter(x => x.id !== id))
 
   // Group: today's deadlines, upcoming, no deadline, done
@@ -84,6 +134,11 @@ export default function Tasks() {
         <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${PRIORITY_COLORS[task.priority]}`}>
           {task.priority.split(' ')[0]}
         </span>
+          {task.repeat && task.repeat !== 'None' && (
+            <span className={`text-[10px] font-mono px-2 py-0.5 rounded border border-current/30 ${REPEAT_COLORS[task.repeat]}`}>
+              ↻ {task.repeat === 'Custom' ? task.customRepeat || 'Custom' : task.repeat}
+            </span>
+          )}
         <button onClick={() => del(task.id)} className="p-1 text-border hover:text-kill transition-colors flex-shrink-0">
           <Trash2 size={12} />
         </button>
@@ -142,6 +197,21 @@ export default function Tasks() {
               <Input type="date" value={form.deadline} onChange={e => set('deadline', e.target.value)} />
             </Field>
           </div>
+          <div className="col-span-2">
+            <Field label="Repeat">
+              <Select value={form.repeat} onChange={e => set('repeat', e.target.value)}>
+                {REPEAT_OPTIONS.map(r => <option key={r}>{r}</option>)}
+              </Select>
+            </Field>
+          </div>
+          {form.repeat === 'Custom' && (
+            <div className="col-span-2">
+              <Field label="Custom (e.g. every 3 days)">
+                <Input placeholder="e.g. every 3 days" value={form.customRepeat} onChange={e => set('customRepeat', e.target.value)} />
+              </Field>
+            </div>
+          )}
+
           <div className="col-span-1 flex items-end">
             <button onClick={add} className="btn-exec w-full justify-center py-2 h-10">
               <Plus size={15} /> Add
