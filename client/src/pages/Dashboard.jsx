@@ -72,9 +72,28 @@ function DashboardPomodoro() {
   const WORK = workMin * 60
   const BREAK = breakMin * 60
 
-  React.useEffect(() => {
-    if (localPhase === 'idle') setTimeLeft(workMin * 60)
-  }, [workMin])
+React.useEffect(() => {
+  const today = new Date().toISOString().split('T')[0]
+  const id = setInterval(() => {
+    try {
+      let tasks = JSON.parse(localStorage.getItem('execos_tasks_v2') || '[]')
+      // Auto-reset repeating tasks
+      const dayOfWeek = new Date().getDay()
+      tasks = tasks.map(task => {
+        if (!task.done || task.repeat === 'None' || !task.lastCompleted) return task
+        if (task.lastCompleted === today) return task
+        const shouldReset = task.repeat === 'Daily' ||
+          (task.repeat === 'Weekdays' && dayOfWeek >= 1 && dayOfWeek <= 5) ||
+          (task.repeat === 'Weekly' && (new Date() - new Date(task.lastCompleted)) >= 7 * 86400000) ||
+          (task.repeat === 'Monthly' && new Date(task.lastCompleted).getDate() !== new Date().getDate())
+        return shouldReset ? { ...task, done: false } : task
+      })
+      localStorage.setItem('execos_tasks_v2', JSON.stringify(tasks))
+      setAllTasks(tasks)
+    } catch {}
+  }, 3000)
+  return () => clearInterval(id)
+}, [])
 
   React.useEffect(() => {
     if (localPhase === 'work' || localPhase === 'break') {
