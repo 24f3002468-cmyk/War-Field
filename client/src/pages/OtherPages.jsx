@@ -137,8 +137,11 @@ function GoalModal({ open, onClose, onSaved, editing }) {
       if (editing?.id) await api.patch('/goals/' + editing.id, form)
       else await api.post('/goals', form)
       onSaved(); onClose()
-    } catch {}
-    setSaving(false)
+    } catch (err) {
+      alert('Failed to save project: ' + (err.response?.data?.error || err.message))
+    } finally {
+      setSaving(false)
+    }
   }
   return (
     <Modal open={open} onClose={onClose} title={editing ? 'Edit Goal' : 'New Goal'}>
