@@ -178,20 +178,25 @@ function AddTimerModal({ open, onClose, onSaved }) {
   const [form, setForm] = useState({ name: '', type: 'Countdown', deadline_at: '' })
   const [saving, setSaving] = useState(false)
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
-  const save = async () => {
-    if (!form.name) return
-    setSaving(true)
-    try {
-      await api.post('/timers', {
-        name: form.name, type: form.type,
-        deadline_at: form.type !== 'Pomodoro' && form.deadline_at ? new Date(form.deadline_at).toISOString() : undefined,
-        duration_seconds: form.type === 'Pomodoro' ? 25 * 60 : null,
-      })
-      onSaved(); onClose()
-      setForm({ name: '', type: 'Pomodoro', deadline_at: '' })
-    } catch {}
+ const save = async () => {
+  if (!form.name) return
+  setSaving(true)
+  try {
+    await api.post('/timers', {
+      name: form.name, type: form.type,
+      deadline_at: form.type !== 'Pomodoro' && form.deadline_at ? new Date(form.deadline_at).toISOString() : null,
+      duration_seconds: form.type === 'Pomodoro' ? 25 * 60 : null,
+    })
+    onSaved()
+    onClose()
+    setForm({ name: '', type: 'Pomodoro', deadline_at: '' })
+  } catch (err) {
+    console.error('Timer save failed:', err)
+    alert('Failed to save timer: ' + (err.response?.data?.error || err.message))
+  } finally {
     setSaving(false)
   }
+}
   return (
   <Modal open={open} onClose={onClose} title="New Timer">
     <Field label="Timer Name"><Input placeholder="e.g. 4th Sem Exams / OA Deadline" value={form.name} onChange={e => set('name', e.target.value)} /></Field>
@@ -208,7 +213,7 @@ function AddTimerModal({ open, onClose, onSaved }) {
     {form.type !== 'Pomodoro' && !form.deadline_at && (
       <p className="text-kill text-xs font-mono">⚠ You must set a deadline date for countdown timers</p>
     )}
-    <button onClick={save} disabled={saving || (form.type !== 'Pomodoro' && !form.deadline_at)} className="btn-exec w-full justify-center py-3 disabled:opacity-40">
+    <button onClick={save} disabled={saving} className="btn-exec w-full justify-center py-3 disabled:opacity-40">
       {saving ? 'Creating...' : 'Create Timer'}
     </button>
   </Modal>
