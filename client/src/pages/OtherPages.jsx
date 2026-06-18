@@ -12,15 +12,20 @@ function ProjectModal({ open, onClose, onSaved, editing }) {
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
   const save = async () => {
-    if (!form.name) return
-    setSaving(true)
-    try {
-      if (editing?.id) await api.patch(`/projects/${editing.id}`, { ...form, current_phase: PHASES[form.phase_index] })
-      else await api.post('/projects', { ...form, current_phase: PHASES[form.phase_index] })
-      onSaved(); onClose()
-    } catch {}
+  if (!form.title) return
+  setSaving(true)
+  try {
+    if (editing?.id) await api.patch('/goals/' + editing.id, form)
+    else await api.post('/goals', form)
+    onSaved()
+    onClose()
+  } catch (err) {
+    console.error('Goal save failed:', err)
+    alert('Failed to save goal: ' + (err.response?.data?.error || err.message))
+  } finally {
     setSaving(false)
   }
+}
 
   return (
     <Modal open={open} onClose={onClose} title={editing ? 'Edit Project' : 'New Project'}>
