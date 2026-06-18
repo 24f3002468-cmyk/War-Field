@@ -149,8 +149,11 @@ export default function DailyLog() {
       })
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
-    } catch {}
-    setSaving(false)
+    } catch (err) {
+      alert('Failed to save log: ' + (err.response?.data?.error || err.message))
+    } finally {
+      setSaving(false)
+    }
   }
 
   if (loading) return <LoadingState />
