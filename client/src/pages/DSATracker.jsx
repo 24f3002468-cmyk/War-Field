@@ -21,8 +21,11 @@ function AddProblemModal({ open, onClose, onSaved }) {
       onSaved()
       onClose()
       setForm({ name: '', difficulty: 'Medium', topic: 'Arrays', insight: '', needs_revision: false })
-    } catch {}
-    setSaving(false)
+    } catch (err) {
+      alert('Failed to save problem: ' + (err.response?.data?.error || err.message))
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
