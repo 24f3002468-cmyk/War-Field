@@ -32,7 +32,7 @@ function AppModal({ open, onClose, onSaved, editing = null }) {
       alert('Failed to save application: ' + (err.response?.data?.error || err.message))
     } finally {
       setSaving(false)
-    }
+    }}
 
   return (
     <Modal open={open} onClose={onClose} title={editing ? 'Edit Application' : 'Add Application'}>
